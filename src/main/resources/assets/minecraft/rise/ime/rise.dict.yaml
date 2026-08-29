@@ -1,0 +1,140 @@
+---
+name: rise
+version: "1.0"
+sort: by_weight
+use_preset_vocabulary: false
+...
+
+简体中文	jian ti zhong wen	1000
+战斗	zhan dou	950
+漏洞	lou dong	900
+幽灵	you ling	900
+资讯	zi xun	900
+语言	yu yan	900
+客户端聊天	ke hu duan liao tian	950
+移动	yi dong	900
+人工智能	ren gong zhi neng	900
+其他	qi ta	900
+玩家	wan jia	900
+渲染	xuan ran	950
+搜寻	sou xun	900
+配置	pei zhi	900
+脚本	jiao ben	900
+主题	zhu ti	900
+
+反机器人	fan ji qi ren	950
+陷阱	xian jing	900
+组合一击	zu he yi ji	900
+刀刀爆击	dao dao bao ji	900
+回溯	hui su	900
+缓冲包	huan chong bao	900
+保持距离	bao chi ju li	950
+杀戮光环	sha lu guang huan	950
+新百米光环	xin bai mi guang huan	900
+快速回血	kuai su hui xue	950
+百米光环	bai mi guang huan	900
+反击退	fan ji tui	900
+防刷屏	fang shua ping	900
+客服检测	ke fu jian ce	900
+崩溃	beng kui	900
+禁用器	jin yong qi	900
+上帝模式	shang di mo shi	950
+闪电追踪器	shan dian zhui zong qi	900
+无转头	wu zhuan tou	900
+延迟欺骗	yan chi qi pian	900
+
+自动瞄准	zi dong miao zhun	950
+瞄准回溯	miao zhun hui su	900
+自动点击	zi dong dian ji	950
+点击辅助	dian ji fu zhu	900
+合法搭路	he fa da lu	900
+快速放置	kuai su fang zhi	900
+命中框	ming zhong kuang	900
+保持疾跑	bao chi ji pao	900
+无点击延迟	wu dian ji yan chi	900
+距离	ju li	900
+安全行走	an quan xing zou	900
+增加击退	zeng jia ji tui	900
+
+飞行	fei xing	950
+背包行走	bei bao xing zou	900
+轻功水上漂	qing gong shui shang piao	900
+跳远	tiao yuan	900
+穿越地板	chuan yue di ban	900
+无减速	wu jian su	900
+穿墙	chuan qiang	900
+药水增加器	yao shui zeng jia qi	900
+蹲下	dun xia	900
+速度	su du	950
+自动疾跑	zi dong ji pao	950
+无视障碍	wu shi zhang ai	900
+灵活动作	ling huo dong zuo	900
+卡住	ka zhu	900
+目标追踪	mu biao zhui zong	900
+传送	chuan song	950
+爬墙	pa qiang	900
+地形加速	di xing jia su	900
+无跳跃延迟	wu tiao yue yan chi	900
+
+反挂机	fan gua ji	950
+自动扣字	zi dong kou zi	900
+自动游玩	zi dong you wan	900
+作弊者检查	zuo bi zhe jian cha	900
+点击音效	dian ji yin xiao	900
+客户端欺骗	ke hu duan qi pian	900
+侦错	zhen cuo	900
+起床战争实用工具	qi chuang zhan zheng shi yong gong ju	900
+绕过聊天限制	rao guo liao tian xian zhi	900
+显示杀手	xian shi sha shou	900
+防止关闭界面	fang zhi guan bi jie mian	900
+近距离语音聊天	jin ju li yu yin liao tian	900
+玩家通知	wan jia tong zhi	900
+显示动态	xian shi dong tai	900
+防崩溃	fang beng kui	900
+翻译	fan yi	950
+
+自由视角	zi you shi jiao	950
+调整环境	tiao zheng huan jing	900
+动画	dong hua	900
+苹果皮	ping guo pi	900
+包床检测	bao chuang jian ce	900
+BPS 显示	bps xian shi	950
+箱子边框	xiang zi bian kuang	900
+点击介面	dian ji jie mian	900
+CPS 显示	cps xian shi	950
+玩家显示	wan jia xian shi	950
+FPS 显示	fps xian shi	950
+灵魂出窍	ling hun chu qiao	900
+夜视	ye shi	950
+性能图	xing neng tu	900
+快捷栏	kuai jie lan	900
+受击镜头	shou ji jing tou	900
+受伤颜色	shou shang yan se	900
+介面	jie mian	900
+物理物品	wu li wu pin	900
+按键显示	an jian xian shi	900
+击杀效果	ji sha xiao guo	900
+名牌	ming pai	900
+相机无阻挡	xiang ji wu zu dang	900
+萤幕外显示	ying mu wai xian shi	900
+显示效果	xian shi xiao guo	900
+雷达	lei da	900
+记分板	ji fen ban	900
+游玩统计	you wan tong ji	900
+目标信息	mu biao xin xi	950
+聊天	liao tian	950
+显示线	xian shi xian	900
+无限聊天	wu xian liao tian	950
+视角晃动	shi jiao huang dong	900
+面包屑	mian bao xie	900
+
+拼音输入法	pin yin shu ru fa	1000
+开启	kai qi	900
+关闭	guan bi	900
+请输入命令	qing shu ru ming ling	900
+无法找到该命令	wu fa zhao dao gai ming ling	900
+统计	tong ji	900
+小时	xiao shi	900
+分钟	fen zhong	900
+秒	miao	900
+名称	ming cheng	900

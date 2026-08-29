@@ -1,0 +1,38 @@
+# Gradle
+.gradle/
+build/
+!gradle/wrapper/gradle-wrapper.jar
+
+# Minecraft Forge run dir
+run/
+logs/
+crash-reports/
+
+# IDE
+.idea/
+*.iml
+*.ipr
+*.iws
+.vscode/
+.settings/
+.project
+.classpath
+eclipse/
+out/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+compile_*.txt
+buildjar_*.txt
+
+# Temp scratch files
+*.tmp.txt
+*_tmp.txt
+*_ref.txt
+*_full.txt
+temp_script_check/
+opal_clickgui.txt
