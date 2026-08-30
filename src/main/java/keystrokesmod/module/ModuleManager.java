@@ -214,7 +214,9 @@ public class ModuleManager {
         this.addModule(tellyBridge = new TellyBridge());
         this.addModule(speedTelly = new SpeedTelly());
         this.addModule(new MyauScaffold());
-        this.addModule(new MyauKillaura());
+        this.addModule(new MyauKillAura());
+        this.addModule(new MyauAimAssist());
+        this.addModule(new MyauAutoClicker());
         this.addModule(new WaterBucket());
 
         this.addModule(new Manager());

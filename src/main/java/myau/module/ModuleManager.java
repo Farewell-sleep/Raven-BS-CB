@@ -19,6 +19,10 @@ public class ModuleManager {
         modules.put(myau.module.modules.AutoBlockIn.class, new myau.module.modules.AutoBlockIn());
         modules.put(myau.module.modules.Scaffold.class, new myau.module.modules.Scaffold());
         modules.put(myau.module.modules.NoSlow.class, new myau.module.modules.NoSlow());
+        modules.put(myau.module.modules.KillAura.class, new myau.module.modules.KillAura());
+        modules.put(myau.module.modules.AimAssist.class, new myau.module.modules.AimAssist());
+        modules.put(myau.module.modules.AutoClicker.class, new myau.module.modules.AutoClicker());
+        modules.put(myau.module.modules.Reach.class, new myau.module.modules.Reach());
     }
 
     @SuppressWarnings("unchecked")

@@ -47,7 +47,12 @@ public class KeyBindUtil {
     }
 
     public static boolean isKeyDown(int keyCode) {
-        return keyCode < 0 ? Mouse.isButtonDown(keyCode + 100) : Keyboard.isKeyDown(keyCode);
+        if (keyCode == 0) return false;
+        if (keyCode < 0) {
+            int btn = keyCode + 100;
+            return btn >= 0 && Mouse.isButtonDown(btn);
+        }
+        return keyCode > 0 && keyCode < Keyboard.KEYBOARD_SIZE && Keyboard.isKeyDown(keyCode);
     }
 
     public static void updateKeyState(int keyCode) {

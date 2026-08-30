@@ -1,7 +1,10 @@
 package com.alan.clients.ui.click.standard.screen.impl;
 
+import com.alan.clients.bridge.RiseModuleWrapper;
 import com.alan.clients.ui.click.standard.RiseClickGUI;
 import com.alan.clients.ui.click.standard.UIColors;
+import com.alan.clients.ui.click.standard.components.ModuleComponent;
+import com.alan.clients.ui.click.standard.components.value.ValueComponent;
 import com.alan.clients.ui.click.standard.screen.Screen;
 import com.alan.clients.util.font.FontManager;
 import com.alan.clients.util.font.FontWeight;
@@ -12,8 +15,8 @@ import com.alan.clients.util.render.ColorUtil;
 import com.alan.clients.util.render.RenderUtil;
 import com.alan.clients.util.vector.Vector2d;
 import com.alan.clients.util.vector.Vector2f;
+import com.alan.clients.value.Value;
 import keystrokesmod.Raven;
-import keystrokesmod.module.Module;
 import keystrokesmod.utility.profile.Profile;
 import org.lwjgl.input.Keyboard;
 
@@ -21,12 +24,16 @@ import java.awt.Color;
 import java.awt.Desktop;
 import java.util.ArrayList;
 import java.util.ConcurrentModificationException;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * Profiles 页面（Raven BS 版）：
  *  - Profile name 输入框 + Create profile / Load profiles / Open folder
- *  - Profiles 横条列表（combat 模块列表风格）；左键加载，右键展开信息 + 绑定
+ *  - Profiles 横条列表；左键加载，右键在横条下方展开模块设置信息
  */
 public final class ProfileScreen implements Screen, InstanceAccess {
     public static boolean azE;
@@ -43,8 +50,14 @@ public final class ProfileScreen implements Screen, InstanceAccess {
 
     private final List<Vector2f> rowPos = new ArrayList<>();
     private final List<Profile> rowProfile = new ArrayList<>();
+    private final List<Float> rowHeight = new ArrayList<>();
 
-    private Module selectedModule;
+    private final Map<Profile, ModuleComponent> componentMap = new HashMap<>();
+    private final Set<Profile> expandedSet = new HashSet<>();
+
+    private final List<Vector2f> actionBtnPos = new ArrayList<>();
+    private final List<Profile> actionBtnProfile = new ArrayList<>();
+    private final List<Integer> actionBtnType = new ArrayList<>();
 
     @Override
     public void onRender(int var1, int var2, float var3) {
@@ -84,6 +97,10 @@ public final class ProfileScreen implements Screen, InstanceAccess {
         // ===== 横条列表 =====
         this.rowPos.clear();
         this.rowProfile.clear();
+        this.rowHeight.clear();
+        this.actionBtnPos.clear();
+        this.actionBtnProfile.clear();
+        this.actionBtnType.clear();
         double ly = baseY + 84;
         this.scrollUtil.qx();
         try {
@@ -92,9 +109,13 @@ public final class ProfileScreen implements Screen, InstanceAccess {
                     if (profile == null || profile.getName() == null) continue;
                     boolean isCurrent = Raven.currentProfile != null && Raven.currentProfile.getName() != null
                         && Raven.currentProfile.getName().equals(profile.getName());
+                    boolean expanded = this.expandedSet.contains(profile);
+                    double rowH = 32.0;
+
                     this.rowPos.add(new Vector2f((float) baseX, (float) ly));
                     this.rowProfile.add(profile);
 
+                    // 横条背景
                     RenderUtil.roundedRectangle(baseX, ly, contentW, 32.0, 6.0, UIColors.OVERLAY.pV());
                     boolean rowHover = GUIUtil.c((float) baseX, (float) ly, (float) contentW, 32.0F, var1, var2);
                     if (rowHover) {
@@ -104,7 +125,50 @@ public final class ProfileScreen implements Screen, InstanceAccess {
                     FontManager.MAIN.a(18, FontWeight.REGULAR).a(profile.getName(), (float) (baseX + 8), (float) (ly + 6), nameColor);
                     FontManager.MAIN.a(13, FontWeight.REGULAR).a(isCurrent ? "Current profile" : "Click to load", (float) (baseX + 8), (float) (ly + 20),
                         isCurrent ? new Color(120, 180, 255).getRGB() : UIColors.TRINARY_TEXT.pW());
-                    ly += 36.0;
+
+                    // 展开设置
+                    if (expanded) {
+                        float sy = (float) (ly + 32.0 + 1.0);
+
+                        // Save / Remove 按钮
+                        String[] actionLabels = {"Save profile", "Remove profile"};
+                        double abx = baseX + 6.0;
+                        for (int ai = 0; ai < actionLabels.length; ai++) {
+                            String label = actionLabels[ai];
+                            float abw = FontManager.MAIN.a(14, FontWeight.REGULAR).getStringWidth(label) + 20.0F;
+                            boolean aHover = GUIUtil.c((float) abx, sy, abw, 20.0F, var1, var2);
+                            int abColor = ai == 0 ? new Color(80, 180, 120).getRGB() : new Color(200, 70, 70).getRGB();
+                            RenderUtil.roundedRectangle(abx, sy, abw, 20.0, 5.0, aHover ? UIColors.BACKGROUND.pV() : UIColors.OVERLAY.pV());
+                            FontManager.MAIN.a(14, FontWeight.REGULAR).a(label, (float) (abx + 10.0), (float) (sy + 4.0), abColor);
+                            this.actionBtnPos.add(new Vector2f((float) abx, sy));
+                            this.actionBtnProfile.add(profile);
+                            this.actionBtnType.add(ai);
+                            abx += abw + 6.0;
+                        }
+                        sy += 24.0;
+
+                        // 模块设置
+                        if (profile.getModule() != null) {
+                            ModuleComponent mc = this.componentMap.get(profile);
+                            if (mc == null) {
+                                mc = new ModuleComponent(new RiseModuleWrapper(profile.getModule()));
+                                this.componentMap.put(profile, mc);
+                            }
+                            for (ValueComponent vc : mc.getValueList()) {
+                                Value<?> value = vc.getValue();
+                                if (value != null && (value.getHideIf() != null && value.getHideIf().getAsBoolean()
+                                    || value.getBooleanSupplier() != null && value.getBooleanSupplier().getAsBoolean())) {
+                                    continue;
+                                }
+                                vc.draw(new Vector2d(baseX + 6.0, sy), var1, var2, var3);
+                                sy += vc.getHeight();
+                            }
+                        }
+                        rowH = (sy - ly) - 1.0;
+                    }
+
+                    this.rowHeight.add((float) rowH);
+                    ly += rowH + 4.0;
                 }
             }
         } catch (ConcurrentModificationException ignored) {
@@ -112,33 +176,6 @@ public final class ProfileScreen implements Screen, InstanceAccess {
 
         this.scrollUtil.V(-(ly - this.scrollUtil.tE() - gui.axI.y) + gui.position.y - 7.0);
         this.scrollUtil.a(new Vector2d(gui.getScale().x + gui.getPosition().x - 4.0, gui.getScale().y + 7.0), gui.position.y - 14.0);
-
-        this.renderDetailPanel(gui, var1, var2);
-    }
-
-    private void renderDetailPanel(RiseClickGUI gui, int mouseX, int mouseY) {
-        if (this.selectedModule == null) return;
-        double px = gui.axI.x + gui.sidebar.aym + gui.position.x - 270.0;
-        double py = gui.axI.y + 20.0;
-        double pw = 260.0;
-        double ph = 108.0;
-        RenderUtil.roundedRectangle(px, py, pw, ph, 8.0, UIColors.OVERLAY.pV());
-        RenderUtil.roundedRectangle(px, py, pw, ph, 8.0, UIColors.OVERLAY.Y(60));
-
-        String name = this.selectedModule.getName();
-        FontManager.MAIN.a(20, FontWeight.BOLD).a(name == null ? "Module" : name, (float) (px + 10.0), (float) (py + 8.0), Color.WHITE.getRGB());
-
-        boolean enabled = this.selectedModule.isEnabled();
-        int stateColor = enabled ? new Color(120, 180, 255).getRGB() : Color.WHITE.getRGB();
-        FontManager.MAIN.a(15, FontWeight.REGULAR).a(enabled ? "Enabled" : "Disabled", (float) (px + 10.0), (float) (py + 34.0), stateColor);
-
-        int key = this.selectedModule.getKeycode();
-        String keyStr = key == 0 ? "NONE" : Keyboard.getKeyName(key);
-        FontManager.MAIN.a(15, FontWeight.REGULAR).a("Bind: " + keyStr, (float) (px + 10.0), (float) (py + 56.0), Color.WHITE.getRGB());
-
-        boolean bindHover = GUIUtil.c((float) (px + 10.0), (float) (py + 74.0), 90.0F, 20.0F, mouseX, mouseY);
-        RenderUtil.roundedRectangle(px + 10.0, py + 74.0, 90.0, 20.0, 5.0, bindHover ? UIColors.BACKGROUND.pV() : UIColors.BACKGROUND.Y(70));
-        FontManager.MAIN.a(14, FontWeight.REGULAR).a("Click to bind", (float) (px + 15.0), (float) (py + 79.0), Color.WHITE.getRGB());
     }
 
     @Override
@@ -170,13 +207,28 @@ public final class ProfileScreen implements Screen, InstanceAccess {
             }
         }
 
-        // 详情面板绑定按钮
-        if (this.selectedModule != null) {
-            RiseClickGUI gui = this.getStandardClickGUI();
-            double px = gui.axI.x + gui.sidebar.aym + gui.position.x - 270.0;
-            double ppy = gui.axI.y + 20.0;
-            if (GUIUtil.c((float) (px + 10.0), (float) (ppy + 74.0), 90.0F, 20.0F, var1, var2) && var3 == 0) {
-                gui.startKeyBind(this.selectedModule);
+        // Action 按钮（Save / Remove）
+        for (int i = 0; i < this.actionBtnPos.size(); i++) {
+            Vector2f ap = this.actionBtnPos.get(i);
+            Profile profile = this.actionBtnProfile.get(i);
+            int type = this.actionBtnType.get(i);
+            String label = type == 0 ? "Save profile" : "Remove profile";
+            float abw = FontManager.MAIN.a(14, FontWeight.REGULAR).getStringWidth(label) + 20.0F;
+            if (GUIUtil.c(ap.x, ap.y, abw, 20.0F, var1, var2) && var3 == 0) {
+                if (type == 0) {
+                    // Save profile：保存当前配置到该 profile
+                    if (Raven.profileManager != null && profile != null) {
+                        Raven.profileManager.saveProfile(profile);
+                    }
+                } else {
+                    // Remove profile：删除该 profile
+                    if (Raven.profileManager != null && profile != null) {
+                        Raven.profileManager.deleteProfile(profile.getName());
+                        this.expandedSet.remove(profile);
+                        this.componentMap.remove(profile);
+                        Raven.profileManager.loadProfiles();
+                    }
+                }
                 return;
             }
         }
@@ -184,15 +236,38 @@ public final class ProfileScreen implements Screen, InstanceAccess {
         // 横条列表
         for (int i = 0; i < this.rowPos.size(); i++) {
             Vector2f pos = this.rowPos.get(i);
+            Profile profile = this.rowProfile.get(i);
+            float h = i < this.rowHeight.size() ? this.rowHeight.get(i) : 32.0F;
             double contentW = this.getStandardClickGUI().position.x - this.getStandardClickGUI().sidebar.aym - 20.0;
+
+            // 横条头部区域（32px）：左键加载，右键切换展开
             if (GUIUtil.c(pos.x, pos.y, (float) contentW, 32.0F, var1, var2)) {
-                Profile profile = this.rowProfile.get(i);
                 if (var3 == 0) {
                     Raven.profileManager.loadProfile(profile.getName());
-                } else if (var3 == 1 && profile.getModule() != null) {
-                    this.selectedModule = profile.getModule();
+                } else if (var3 == 1) {
+                    if (this.expandedSet.contains(profile)) {
+                        this.expandedSet.remove(profile);
+                    } else {
+                        this.expandedSet.add(profile);
+                    }
                 }
                 return;
+            }
+
+            // 展开区域：把点击传给设置组件
+            if (this.expandedSet.contains(profile) && h > 32.0F) {
+                ModuleComponent mc = this.componentMap.get(profile);
+                if (mc != null && GUIUtil.c(pos.x, pos.y + 32.0F, (float) contentW, h - 32.0F, var1, var2)) {
+                    for (ValueComponent vc : mc.getValueList()) {
+                        Value<?> value = vc.getValue();
+                        if (value != null && (value.getHideIf() != null && value.getHideIf().getAsBoolean()
+                            || value.getBooleanSupplier() != null && value.getBooleanSupplier().getAsBoolean())) {
+                            continue;
+                        }
+                        if (vc.e(var1, var2, var3)) break;
+                    }
+                    return;
+                }
             }
         }
     }

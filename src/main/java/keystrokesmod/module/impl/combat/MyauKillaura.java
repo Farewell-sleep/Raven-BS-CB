@@ -23,96 +23,121 @@ import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
 import net.minecraftforge.fml.common.gameevent.TickEvent;
 
 /**
- * MyauKillaura —— OpenMyauPP 的 KillAura 完整移植。
- * 内部持有 OpenMyauPP 原版 KillAura 核心（myau.module.modules.KillAura），
- * 事件桥接层把 Raven BS 的 Forge 事件转译成 myau 事件系统调用。
- * 设置桥接层把 BS Setting 同步到 myau Property。
- * 攻击/旋转/自动格挡/目标选择逻辑均为 OpenMyauPP 原版 1:1。
+ * MyauKillAura —— OpenMyauPP KillAura 完整移植（BS 包装层）。
  */
-public class MyauKillaura extends Module {
+public class MyauKillAura extends Module {
     private final myau.module.modules.KillAura core;
     private boolean managersRegistered;
+    private float[] pendingRotation = null;
 
-    // ===== BS Setting（桥接到 myau Property）=====
     private final SliderSetting mode = new SliderSetting("Mode", 0, new String[]{"Single", "Switch"});
     private final SliderSetting sort = new SliderSetting("Sort", 0, new String[]{"Distance", "Health", "Hurt time", "FOV"});
     private final SliderSetting autoBlock = new SliderSetting("Auto block", 2,
-            new String[]{"None", "Vanilla", "Spoof", "Hypixel", "Blink", "Interact", "Swap", "Legit"});
-    private final SliderSetting rotations = new SliderSetting("Rotations", 2, new String[]{"None", "Legit", "Silent", "Lock view"});
-    private final SliderSetting moveFix = new SliderSetting("Move fix", 1, new String[]{"None", "Silent", "Strict"});
-    private final SliderSetting showTarget = new SliderSetting("Show target", 0, new String[]{"None", "Default", "HUD"});
+            new String[]{"None", "Vanilla", "Spoof", "Hypixel", "Blink", "Interact", "Swap", "Legit", "Fake"});
+    private final ButtonSetting autoBlockRequirePress = new ButtonSetting("Auto block require press", false);
+    private final SliderSetting autoBlockMinCPS = new SliderSetting("Auto block min APS", 8.0, 1.0, 20.0, 0.5);
+    private final SliderSetting autoBlockMaxCPS = new SliderSetting("Auto block max APS", 10.0, 1.0, 20.0, 0.5);
+    private final SliderSetting autoBlockRange = new SliderSetting("Auto block range", 6.0, 3.0, 8.0, 0.1);
+    private final SliderSetting swingRange = new SliderSetting("Swing range", 3.5, 3.0, 6.0, 0.1);
+    private final SliderSetting attackRange = new SliderSetting("Attack range", 3.0, 3.0, 6.0, 0.1);
+    private final SliderSetting fov = new SliderSetting("FOV", 360, 30, 360, 1);
     private final SliderSetting minCPS = new SliderSetting("Min CPS", 14, 1, 20, 1);
     private final SliderSetting maxCPS = new SliderSetting("Max CPS", 14, 1, 20, 1);
     private final SliderSetting switchDelay = new SliderSetting("Switch delay", 150, 0, 1000, 10);
-    private final SliderSetting attackRange = new SliderSetting("Attack range", 3.0, 3.0, 6.0, 0.1);
-    private final SliderSetting swingRange = new SliderSetting("Swing range", 3.5, 3.0, 6.0, 0.1);
-    private final SliderSetting fov = new SliderSetting("FOV", 360, 30, 360, 1);
+    private final SliderSetting rotations = new SliderSetting("Rotations", 2, new String[]{"None", "Legit", "Silent", "Lock view"});
+    private final SliderSetting moveFix = new SliderSetting("Move fix", 1, new String[]{"None", "Silent", "Strict"});
     private final SliderSetting smoothing = new SliderSetting("Smoothing", 0, 0, 100, 1);
     private final SliderSetting angleStep = new SliderSetting("Angle step", 90, 30, 180, 1);
     private final ButtonSetting throughWalls = new ButtonSetting("Through walls", true);
     private final ButtonSetting requirePress = new ButtonSetting("Require press", false);
+    private final ButtonSetting allowMining = new ButtonSetting("Allow mining", true);
     private final ButtonSetting weaponsOnly = new ButtonSetting("Weapons only", true);
+    private final ButtonSetting allowTools = new ButtonSetting("Allow tools", false);
+    private final ButtonSetting inventoryCheck = new ButtonSetting("Inventory check", true);
+    private final ButtonSetting botCheck = new ButtonSetting("Bot check", true);
     private final ButtonSetting players = new ButtonSetting("Players", true);
+    private final ButtonSetting bosses = new ButtonSetting("Bosses", false);
     private final ButtonSetting mobs = new ButtonSetting("Mobs", false);
     private final ButtonSetting animals = new ButtonSetting("Animals", false);
-    private final ButtonSetting bosses = new ButtonSetting("Bosses", false);
+    private final ButtonSetting golems = new ButtonSetting("Golems", false);
+    private final ButtonSetting silverfish = new ButtonSetting("Silverfish", false);
     private final ButtonSetting teams = new ButtonSetting("Teams", true);
+    private final SliderSetting showTarget = new SliderSetting("Show target", 0, new String[]{"None", "Default", "HUD"});
+    private final SliderSetting debugLog = new SliderSetting("Debug log", 0, new String[]{"None", "Health"});
 
-    public MyauKillaura() {
-        super("MyauKillaura", Module.category.combat, 0);
+    public MyauKillAura() {
+        super("MyauKillAura", Module.category.combat, 0);
         this.core = new myau.module.modules.KillAura();
         EventManager.register(core);
-        // 注册 BS Setting
         this.registerSetting(mode);
         this.registerSetting(sort);
         this.registerSetting(autoBlock);
-        this.registerSetting(rotations);
-        this.registerSetting(moveFix);
-        this.registerSetting(showTarget);
+        this.registerSetting(autoBlockRequirePress);
+        this.registerSetting(autoBlockMinCPS);
+        this.registerSetting(autoBlockMaxCPS);
+        this.registerSetting(autoBlockRange);
+        this.registerSetting(swingRange);
+        this.registerSetting(attackRange);
+        this.registerSetting(fov);
         this.registerSetting(minCPS);
         this.registerSetting(maxCPS);
         this.registerSetting(switchDelay);
-        this.registerSetting(attackRange);
-        this.registerSetting(swingRange);
-        this.registerSetting(fov);
+        this.registerSetting(rotations);
+        this.registerSetting(moveFix);
         this.registerSetting(smoothing);
         this.registerSetting(angleStep);
         this.registerSetting(throughWalls);
         this.registerSetting(requirePress);
+        this.registerSetting(allowMining);
         this.registerSetting(weaponsOnly);
+        this.registerSetting(allowTools);
+        this.registerSetting(inventoryCheck);
+        this.registerSetting(botCheck);
         this.registerSetting(players);
+        this.registerSetting(bosses);
         this.registerSetting(mobs);
         this.registerSetting(animals);
-        this.registerSetting(bosses);
+        this.registerSetting(golems);
+        this.registerSetting(silverfish);
         this.registerSetting(teams);
+        this.registerSetting(showTarget);
+        this.registerSetting(debugLog);
     }
 
-    /**
-     * 把 BS Setting 的值同步到 myau Property（每 tick 调用）。
-     */
     private void syncSettings() {
         core.mode.setValue((int) mode.getInput());
         core.sort.setValue((int) sort.getInput());
         core.autoBlock.setValue((int) autoBlock.getInput());
-        core.rotations.setValue((int) rotations.getInput());
-        core.moveFix.setValue((int) moveFix.getInput());
-        core.showTarget.setValue((int) showTarget.getInput());
+        core.autoBlockRequirePress.setValue(autoBlockRequirePress.isToggled());
+        core.autoBlockMinCPS.setValue((float) autoBlockMinCPS.getInput());
+        core.autoBlockMaxCPS.setValue((float) autoBlockMaxCPS.getInput());
+        core.autoBlockRange.setValue((float) autoBlockRange.getInput());
+        core.swingRange.setValue((float) swingRange.getInput());
+        core.attackRange.setValue((float) attackRange.getInput());
+        core.fov.setValue((int) fov.getInput());
         core.minCPS.setValue((int) minCPS.getInput());
         core.maxCPS.setValue((int) maxCPS.getInput());
         core.switchDelay.setValue((int) switchDelay.getInput());
-        core.attackRange.setValue((float) attackRange.getInput());
-        core.swingRange.setValue((float) swingRange.getInput());
-        core.fov.setValue((int) fov.getInput());
+        core.rotations.setValue((int) rotations.getInput());
+        core.moveFix.setValue((int) moveFix.getInput());
         core.smoothing.setValue((int) smoothing.getInput());
         core.angleStep.setValue((int) angleStep.getInput());
         core.throughWalls.setValue(throughWalls.isToggled());
         core.requirePress.setValue(requirePress.isToggled());
+        core.allowMining.setValue(allowMining.isToggled());
         core.weaponsOnly.setValue(weaponsOnly.isToggled());
+        core.allowTools.setValue(allowTools.isToggled());
+        core.inventoryCheck.setValue(inventoryCheck.isToggled());
+        core.botCheck.setValue(botCheck.isToggled());
         core.players.setValue(players.isToggled());
+        core.bosses.setValue(bosses.isToggled());
         core.mobs.setValue(mobs.isToggled());
         core.animals.setValue(animals.isToggled());
-        core.bosses.setValue(bosses.isToggled());
+        core.golems.setValue(golems.isToggled());
+        core.silverfish.setValue(silverfish.isToggled());
         core.teams.setValue(teams.isToggled());
+        core.showTarget.setValue((int) showTarget.getInput());
+        core.debugLog.setValue((int) debugLog.getInput());
     }
 
     private void ensureManagers() {
@@ -137,16 +162,20 @@ public class MyauKillaura extends Module {
         core.setEnabled(false);
     }
 
-    // ===== Myau UpdateEvent (PRE/POST) =====
     @SubscribeEvent(priority = EventPriority.HIGHEST)
     public void onPreUpdate(PreUpdateEvent e) {
         if (mc.thePlayer == null) return;
         syncSettings();
+        pendingRotation = null;
         myau.events.UpdateEvent event = new myau.events.UpdateEvent(
                 EventType.PRE,
                 mc.thePlayer.rotationYaw, mc.thePlayer.rotationPitch,
                 mc.thePlayer.rotationYaw, mc.thePlayer.rotationPitch);
         EventManager.call(event);
+        // SILENT 模式：KillAura 通过 event.setRotation() 设置旋转，需要保存并在 PreMotion 中应用
+        if (event.isRotated() || event.isRotating() >= 0) {
+            pendingRotation = new float[]{event.getNewYaw(), event.getNewPitch()};
+        }
     }
 
     @SubscribeEvent(priority = EventPriority.HIGHEST)
@@ -158,7 +187,6 @@ public class MyauKillaura extends Module {
                 mc.thePlayer.rotationYaw, mc.thePlayer.rotationPitch));
     }
 
-    // ===== Myau TickEvent (PRE/POST) =====
     @SubscribeEvent
     public void onClientTick(TickEvent.ClientTickEvent e) {
         if (mc.thePlayer == null) return;
@@ -166,29 +194,27 @@ public class MyauKillaura extends Module {
         EventManager.call(new myau.events.TickEvent(type));
     }
 
-    // ===== 旋转应用 =====
     @SubscribeEvent(priority = EventPriority.HIGHEST)
     public void onPreMotion(PreMotionEvent e) {
-        if (RotationState.isActived()) {
+        if (pendingRotation != null) {
+            e.setRotations(pendingRotation[0], pendingRotation[1]);
+        } else if (RotationState.isActived()) {
             e.setRotations(RotationState.getSmoothedYaw(), RotationState.getRotationPitch());
         }
     }
 
-    // ===== MoveInput =====
     @SubscribeEvent
     public void onPostPlayerInput(PostPlayerInputEvent e) {
         if (!core.isEnabled() || mc.thePlayer == null) return;
         EventManager.call(new myau.events.MoveInputEvent());
     }
 
-    // ===== Render =====
     @SubscribeEvent
     public void onRenderWorld(RenderWorldLastEvent e) {
         if (!core.isEnabled()) return;
         EventManager.call(new myau.events.Render3DEvent(e.partialTicks));
     }
 
-    // ===== Packet =====
     @SubscribeEvent(priority = EventPriority.HIGHEST)
     public void onSendPacket(SendPacketEvent e) {
         if (!core.isEnabled()) return;
@@ -211,14 +237,12 @@ public class MyauKillaura extends Module {
         if (event.isCancelled()) e.setCanceled(true);
     }
 
-    // ===== World load =====
     @SubscribeEvent
     public void onWorldLoad(WorldEvent.Load e) {
         if (!core.isEnabled() || e.world == null || !e.world.isRemote) return;
         EventManager.call(new myau.events.LoadWorldEvent());
     }
 
-    // ===== Mouse =====
     @SubscribeEvent
     public void onRightClick(keystrokesmod.event.RightClickMouseEvent e) {
         if (!core.isEnabled()) return;
@@ -235,7 +259,6 @@ public class MyauKillaura extends Module {
         if (event.isCancelled()) e.setCanceled(true);
     }
 
-    // ===== HitBlock =====
     @SubscribeEvent
     public void onHitBlock(PlayerInteractEvent e) {
         if (!core.isEnabled() || e.action != PlayerInteractEvent.Action.LEFT_CLICK_BLOCK) return;

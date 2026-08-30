@@ -1,7 +1,10 @@
 package com.alan.clients.ui.click.standard.screen.impl;
 
+import com.alan.clients.bridge.RiseModuleWrapper;
 import com.alan.clients.ui.click.standard.RiseClickGUI;
 import com.alan.clients.ui.click.standard.UIColors;
+import com.alan.clients.ui.click.standard.components.ModuleComponent;
+import com.alan.clients.ui.click.standard.components.value.ValueComponent;
 import com.alan.clients.ui.click.standard.screen.Screen;
 import com.alan.clients.util.font.FontManager;
 import com.alan.clients.util.font.FontWeight;
@@ -12,6 +15,7 @@ import com.alan.clients.util.render.ColorUtil;
 import com.alan.clients.util.render.RenderUtil;
 import com.alan.clients.util.vector.Vector2d;
 import com.alan.clients.util.vector.Vector2f;
+import com.alan.clients.value.Value;
 import keystrokesmod.Raven;
 import keystrokesmod.module.Module;
 import keystrokesmod.script.Manager;
@@ -24,14 +28,17 @@ import java.awt.Desktop;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.ConcurrentModificationException;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Scripts 页面（Raven BS 版，整合 BS Manager 全部功能）：
  *  - Script name 输入框 + Create script / Load scripts / Open folder / View documentation
  *  - Privacy: Enable http requests / Enable websockets 开关
- *  - Scripts 横条列表（combat 模块列表风格）；左键开关，右键展开信息 + 绑定
+ *  - Scripts 横条列表；左键开关，右键在横条下方展开模块设置信息
  */
 public final class ScriptScreen implements Screen, InstanceAccess {
     public static boolean azE;
@@ -53,8 +60,10 @@ public final class ScriptScreen implements Screen, InstanceAccess {
     private final List<Vector2f> rowPos = new ArrayList<>();
     private final List<Module> rowModule = new ArrayList<>();
     private final List<Boolean> rowFailed = new ArrayList<>();
+    private final List<Float> rowHeight = new ArrayList<>();
 
-    private Module selectedModule;
+    private final Map<Module, ModuleComponent> componentMap = new HashMap<>();
+    private final Set<Module> expandedSet = new HashSet<>();
 
     @Override
     public void onRender(int var1, int var2, float var3) {
@@ -101,6 +110,7 @@ public final class ScriptScreen implements Screen, InstanceAccess {
         this.rowPos.clear();
         this.rowModule.clear();
         this.rowFailed.clear();
+        this.rowHeight.clear();
         double ly = baseY + 124;
         this.scrollUtil.qx();
         try {
@@ -111,6 +121,9 @@ public final class ScriptScreen implements Screen, InstanceAccess {
                     if (script == null || module == null || module.getName() == null) continue;
                     boolean failed = script.error;
                     boolean enabled = module.isEnabled();
+                    boolean expanded = !failed && this.expandedSet.contains(module);
+                    double rowH = 32.0;
+
                     this.rowPos.add(new Vector2f((float) baseX, (float) ly));
                     this.rowModule.add(module);
                     this.rowFailed.add(failed);
@@ -127,7 +140,29 @@ public final class ScriptScreen implements Screen, InstanceAccess {
                     String desc = failed ? "Failed to load" : (enabled ? "Enabled" : "Disabled");
                     FontManager.MAIN.a(13, FontWeight.REGULAR).a(desc, (float) (baseX + 8), (float) (ly + 20),
                         failed ? new Color(255, 120, 120).getRGB() : UIColors.TRINARY_TEXT.pW());
-                    ly += 36.0;
+
+                    // 展开设置
+                    if (expanded) {
+                        ModuleComponent mc = this.componentMap.get(module);
+                        if (mc == null) {
+                            mc = new ModuleComponent(new RiseModuleWrapper(module));
+                            this.componentMap.put(module, mc);
+                        }
+                        float sy = (float) (ly + 32.0 + 1.0);
+                        for (ValueComponent vc : mc.getValueList()) {
+                            Value<?> value = vc.getValue();
+                            if (value != null && (value.getHideIf() != null && value.getHideIf().getAsBoolean()
+                                || value.getBooleanSupplier() != null && value.getBooleanSupplier().getAsBoolean())) {
+                                continue;
+                            }
+                            vc.draw(new Vector2d(baseX + 6.0, sy), var1, var2, var3);
+                            sy += vc.getHeight();
+                        }
+                        rowH = (sy - ly) - 1.0;
+                    }
+
+                    this.rowHeight.add((float) rowH);
+                    ly += rowH + 4.0;
                 }
             }
         } catch (ConcurrentModificationException ignored) {
@@ -135,8 +170,6 @@ public final class ScriptScreen implements Screen, InstanceAccess {
 
         this.scrollUtil.V(-(ly - this.scrollUtil.tE() - gui.axI.y) + gui.position.y - 7.0);
         this.scrollUtil.a(new Vector2d(gui.getScale().x + gui.getPosition().x - 4.0, gui.getScale().y + 7.0), gui.position.y - 14.0);
-
-        this.renderDetailPanel(gui, var1, var2);
     }
 
     private void renderToggle(double x, double y, String label, boolean state, int mouseX, int mouseY) {
@@ -145,31 +178,6 @@ public final class ScriptScreen implements Screen, InstanceAccess {
         RenderUtil.roundedRectangle(state ? x + 17 : x + 2, y + 2, 12.0, 12.0, 6.0, Color.WHITE);
         FontManager.MAIN.a(14, FontWeight.REGULAR).a(label, (float) (x + 40), (float) (y + 2),
             hover ? Color.WHITE.getRGB() : UIColors.SECONDARY_TEXT.pW());
-    }
-
-    private void renderDetailPanel(RiseClickGUI gui, int mouseX, int mouseY) {
-        if (this.selectedModule == null) return;
-        double px = gui.axI.x + gui.sidebar.aym + gui.position.x - 270.0;
-        double py = gui.axI.y + 20.0;
-        double pw = 260.0;
-        double ph = 108.0;
-        RenderUtil.roundedRectangle(px, py, pw, ph, 8.0, UIColors.OVERLAY.pV());
-        RenderUtil.roundedRectangle(px, py, pw, ph, 8.0, UIColors.OVERLAY.Y(60));
-
-        String name = this.selectedModule.getName();
-        FontManager.MAIN.a(20, FontWeight.BOLD).a(name == null ? "Module" : name, (float) (px + 10.0), (float) (py + 8.0), Color.WHITE.getRGB());
-
-        boolean enabled = this.selectedModule.isEnabled();
-        int stateColor = enabled ? new Color(120, 180, 255).getRGB() : Color.WHITE.getRGB();
-        FontManager.MAIN.a(15, FontWeight.REGULAR).a(enabled ? "Enabled" : "Disabled", (float) (px + 10.0), (float) (py + 34.0), stateColor);
-
-        int key = this.selectedModule.getKeycode();
-        String keyStr = key == 0 ? "NONE" : Keyboard.getKeyName(key);
-        FontManager.MAIN.a(15, FontWeight.REGULAR).a("Bind: " + keyStr, (float) (px + 10.0), (float) (py + 56.0), Color.WHITE.getRGB());
-
-        boolean bindHover = GUIUtil.c((float) (px + 10.0), (float) (py + 74.0), 90.0F, 20.0F, mouseX, mouseY);
-        RenderUtil.roundedRectangle(px + 10.0, py + 74.0, 90.0, 20.0, 5.0, bindHover ? UIColors.BACKGROUND.pV() : UIColors.BACKGROUND.Y(70));
-        FontManager.MAIN.a(14, FontWeight.REGULAR).a("Click to bind", (float) (px + 15.0), (float) (py + 79.0), Color.WHITE.getRGB());
     }
 
     @Override
@@ -213,31 +221,43 @@ public final class ScriptScreen implements Screen, InstanceAccess {
             return;
         }
 
-        // 详情面板绑定按钮
-        if (this.selectedModule != null) {
-            RiseClickGUI gui = this.getStandardClickGUI();
-            double px = gui.axI.x + gui.sidebar.aym + gui.position.x - 270.0;
-            double ppy = gui.axI.y + 20.0;
-            if (GUIUtil.c((float) (px + 10.0), (float) (ppy + 74.0), 90.0F, 20.0F, var1, var2) && var3 == 0) {
-                gui.startKeyBind(this.selectedModule);
-                return;
-            }
-        }
-
         // 横条列表
         for (int i = 0; i < this.rowPos.size(); i++) {
             Vector2f pos = this.rowPos.get(i);
+            Module module = this.rowModule.get(i);
+            boolean failed = this.rowFailed.get(i);
+            float h = i < this.rowHeight.size() ? this.rowHeight.get(i) : 32.0F;
             double contentW = this.getStandardClickGUI().position.x - this.getStandardClickGUI().sidebar.aym - 20.0;
+
+            // 横条头部区域（32px）：左键开关，右键切换展开
             if (GUIUtil.c(pos.x, pos.y, (float) contentW, 32.0F, var1, var2)) {
-                Module module = this.rowModule.get(i);
-                boolean failed = this.rowFailed.get(i);
                 if (var3 == 0 && !failed) {
                     module.toggle();
                     this.aT();
-                } else if (var3 == 1) {
-                    this.selectedModule = module;
+                } else if (var3 == 1 && !failed) {
+                    if (this.expandedSet.contains(module)) {
+                        this.expandedSet.remove(module);
+                    } else {
+                        this.expandedSet.add(module);
+                    }
                 }
                 return;
+            }
+
+            // 展开区域：把点击传给设置组件
+            if (!failed && this.expandedSet.contains(module) && h > 32.0F) {
+                ModuleComponent mc = this.componentMap.get(module);
+                if (mc != null && GUIUtil.c(pos.x, pos.y + 32.0F, (float) contentW, h - 32.0F, var1, var2)) {
+                    for (ValueComponent vc : mc.getValueList()) {
+                        Value<?> value = vc.getValue();
+                        if (value != null && (value.getHideIf() != null && value.getHideIf().getAsBoolean()
+                            || value.getBooleanSupplier() != null && value.getBooleanSupplier().getAsBoolean())) {
+                            continue;
+                        }
+                        if (vc.e(var1, var2, var3)) break;
+                    }
+                    return;
+                }
             }
         }
     }
