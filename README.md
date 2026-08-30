@@ -13,7 +13,7 @@
 ---
 
 ## Information
-
+这是用ai skid的客户端，如果你认为这是一坨狗屎那么你是对的
 Raven Bs was created with a strong foundation built on user privacy and the commitment to provide anyone with access to a polished, high-quality utility mod. We believe that privacy should never be traded for using a client, which is why we've designed this mod from the ground up to respect your data and anonymity. We offer a clean, feature-rich experience without the bloat or invasive tracking found in other mods.
 
 ## Installation
