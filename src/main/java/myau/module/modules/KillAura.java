@@ -172,6 +172,7 @@ public class KillAura extends Module {
             return false;
         } else if (!(Boolean) this.weaponsOnly.getValue()
                 || ItemUtil.hasRawUnbreakingEnchant()
+                || ItemUtil.isHoldingSword()
                 || this.allowTools.getValue() && ItemUtil.isHoldingTool()) {
             if (((IAccessorPlayerControllerMP) mc.playerController).getIsHittingBlock()) {
                 return false;
@@ -371,6 +372,7 @@ public class KillAura extends Module {
             return false;
         } else if (!this.weaponsOnly.getValue()
                 || ItemUtil.hasRawUnbreakingEnchant()
+                || ItemUtil.isHoldingSword()
                 || this.allowTools.getValue() && ItemUtil.isHoldingTool()) {
             return !this.requirePress.getValue() || KeyBindUtil.isKeyDown(mc.gameSettings.keyBindAttack.getKeyCode());
         } else {

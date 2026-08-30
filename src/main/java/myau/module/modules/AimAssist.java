@@ -74,6 +74,7 @@ public class AimAssist extends Module {
         if (this.isEnabled() && event.getType() == EventType.POST && mc.currentScreen == null) {
             if (!(Boolean) this.weaponOnly.getValue()
                     || ItemUtil.hasRawUnbreakingEnchant()
+                    || ItemUtil.isHoldingSword()
                     || this.allowTools.getValue() && ItemUtil.isHoldingTool()) {
                 boolean attacking = PlayerUtil.isAttacking();
                 if (!attacking || !this.isLookingAtBlock()) {

@@ -176,6 +176,14 @@ public class MyauKillAura extends Module {
         if (event.isRotated() || event.isRotating() >= 0) {
             pendingRotation = new float[]{event.getNewYaw(), event.getNewPitch()};
         }
+        // 调试输出
+        if (mc.thePlayer.ticksExisted % 20 == 0) {
+            System.out.println("[MyauKillAura] enabled=" + core.isEnabled()
+                + " target=" + (core.getTarget() != null ? core.getTarget().getName() : "null")
+                + " rotated=" + event.isRotated()
+                + " pending=" + (pendingRotation != null)
+                + " weapon=" + (mc.thePlayer.getHeldItem() != null ? mc.thePlayer.getHeldItem().getItem().getClass().getSimpleName() : "null"));
+        }
     }
 
     @SubscribeEvent(priority = EventPriority.HIGHEST)
