@@ -34,5 +34,11 @@ buildjar_*.txt
 *_tmp.txt
 *_ref.txt
 *_full.txt
+*_closure.txt
+*_ref.png
+proc_res.txt
 temp_script_check/
 opal_clickgui.txt
+
+# Temp dev scripts (Java project, no Python sources in root)
+*.py
